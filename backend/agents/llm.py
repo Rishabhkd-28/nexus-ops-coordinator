@@ -4,7 +4,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-MODELS = ["openrouter/auto"]
+MODELS = ["mistralai/mistral-7b-instruct:free", "meta-llama/llama-3.2-3b-instruct:free", "openrouter/auto"]
 
 async def call_llm(system_prompt: str, user_message: str) -> str:
     if not OPENROUTER_API_KEY:
