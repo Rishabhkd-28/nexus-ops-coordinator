@@ -4,6 +4,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_API_KEY_2 = os.getenv("OPENROUTER_API_KEY_2", "")
+OPENROUTER_KEYS = [k for k in [OPENROUTER_API_KEY, OPENROUTER_API_KEY_2] if k]
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 GROQ_MODELS = [
