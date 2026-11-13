@@ -10,9 +10,8 @@ OPENROUTER_KEYS = [k for k in [OPENROUTER_API_KEY, OPENROUTER_API_KEY_2] if k]
 OPENROUTER_MODELS = [
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3.5-lightning:free",
-    "liquid/lfm-3-1.7b:free",
     "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-3.5-lightning:free",
 ]
 
 _last_key_index = 0
