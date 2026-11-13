@@ -204,7 +204,7 @@ async def trigger_planning(run_id: str):
 @app.post("/run/{run_id}/review")
 async def trigger_review(run_id: str):
     s = get_session(run_id)
-    if s["planning"]["status"] != "done":
+    if s["planning"]["status"] not in ("done", "waiting") or s["planning"]["output"] is None:
         raise HTTPException(400, "Planning must complete before Review")
 
     # Hard cap at 2 rounds
