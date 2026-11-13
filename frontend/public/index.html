@@ -3189,7 +3189,6 @@
         toast('Pipeline complete', 'success');
       } catch (e) {
         addFeed('sys', `Error: ${e.message}. Running demo mode.`, 'err');
-        await runDemo();
       }
       finishRun();
     }
