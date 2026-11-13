@@ -9,11 +9,9 @@ logger = logging.getLogger(__name__)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
 MODELS = [
-    "google/gemma-3-4b-it:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "microsoft/phi-3-mini-128k-instruct:free",
-    "qwen/qwen-2-7b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
+    "nvidia/llama-3.1-nemotron-nano-8b-v1:free",
+    "nvidia/nemotron-3-ultra:free",
+    "openrouter/auto",
 ]
 
 async def call_llm(system_prompt: str, user_message: str) -> str:
