@@ -25,7 +25,11 @@ async def call_llm(system_prompt: str, user_message: str) -> str:
                     data = response.json()
                     if "error" not in data:
                         logger.info(f"Success with model: {model}")
-                        return data["choices"][0]["message"]["content"]
+                        content = data["choices"][0]["message"]["content"]
+                        if content is not None:
+                            logger.info(f"Success with model: {model}")
+                            return content
+                        logger.warning(f"Model {model} returned null content")
                 logger.warning(f"Model {model} failed: {response.text[:100]}")
         except Exception as e:
             logger.warning(f"Model {model} exception: {e}")
@@ -33,6 +37,8 @@ async def call_llm(system_prompt: str, user_message: str) -> str:
 
 async def call_llm_json(system_prompt: str, user_message: str) -> dict:
     raw = await call_llm(system_prompt, user_message)
+    if not raw:
+        return {"decisions":[],"requirements":[],"constraints":[],"flags":[],"tasks":[],"approved":False,"summary":"","corrections":[],"unresolved":[],"user_edits":[]}
     cleaned = raw.strip()
     if "```" in cleaned:
         cleaned = "\n".join(l for l in cleaned.split("\n") if not l.strip().startswith("```")).strip()
