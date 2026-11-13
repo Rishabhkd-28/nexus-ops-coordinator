@@ -3119,10 +3119,10 @@
       document.getElementById('run-btn').disabled = true; document.getElementById('run-btn').textContent = 'Running…'; document.getElementById('run-btn').className = 'btn btn-p go';
       document.getElementById('ctrl-idle').style.display = 'none'; document.getElementById('ctrl-active').style.display = 'block';
 
-      // Try real API, fall back to demo
-      let useReal = false;
-      try { await api.start('test', 'test'); useReal = true } catch (e) { }
-      if (useReal) { await runReal(tr, ru) } else { await runDemo() }
+      await runReal(tr, ru);
+
+
+
     }
 
     async function runReal(tr, ru) {
