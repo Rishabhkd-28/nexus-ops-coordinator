@@ -3080,7 +3080,7 @@
 
     // ── API ───────────────────────────────────────────────────────────────────────
     async function apiFetch(method, path, body) {
-      const res = await fetch(BASE() + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+      const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 120000); let res; try { res = await fetch(BASE() + path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined, signal: controller.signal }); } finally { clearTimeout(timer); }
       if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || 'Failed') }
       return res.json();
     }
