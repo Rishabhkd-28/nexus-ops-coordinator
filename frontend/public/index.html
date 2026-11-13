@@ -961,7 +961,7 @@
 
     /* Agent node */
     .agent-node {
-      width: 420px;
+
       background: var(--paper);
       border: 1.5px solid var(--line2);
       border-radius: 14px;
@@ -3114,7 +3114,7 @@
       ['intake', 'planning', 'review'].forEach(k => { setSt(k, 'waiting'); const el = document.getElementById('ctx-' + k); if (el) el.style.display = 'none'; const tl = document.getElementById('time-' + k); if (tl) tl.style.display = 'none' });
       clearOutputCards(); killPts(); pStops = {};
       document.getElementById('out-empty').style.display = 'block'; document.getElementById('out-content').style.display = 'none'; document.getElementById('out-cnt').style.display = 'none';
-      document.getElementById('feed-empty').style.display = 'block'; document.getElementById('feed-list').innerHTML = ''; document.getElementById('conv-cnt').textContent = '0';
+
       document.getElementById('rst-btn').disabled = false;
       document.getElementById('run-btn').disabled = true; document.getElementById('run-btn').textContent = 'Running…'; document.getElementById('run-btn').className = 'btn btn-p go';
       document.getElementById('ctrl-idle').style.display = 'none'; document.getElementById('ctrl-active').style.display = 'block';
