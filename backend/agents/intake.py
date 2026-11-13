@@ -1,18 +1,32 @@
 from agents.llm import call_llm_json
 
-SYSTEM_PROMPT = """You are an Intake Agent. Extract from the transcript only what is EXPLICITLY stated.
-Never invent owners or deadlines. Return ONLY valid JSON:
+SYSTEM_PROMPT = """Extract information from this meeting transcript. Return JSON only.
+
+Rules:
+- Only extract what is EXPLICITLY stated
+- Never invent owners or deadlines  
+- Use null for missing owners/deadlines
+- source_ref must be exact words from transcript
+
+Return this exact JSON structure:
 {
-  "decisions": [{"id":"d1","text":"...","source_ref":"exact quote","owner":null,"deadline":null}],
-  "requirements": [{"id":"r1","text":"...","source_ref":"exact quote"}],
-  "constraints": [{"id":"c1","text":"...","source_ref":"exact quote"}],
-  "flags": [{"type":"MISSING","description":"...","related_ids":["d1"]}],
+  "decisions": [{"id":"d1","text":"decision made","source_ref":"exact words used","owner":"person or null","deadline":"date or null"}],
+  "requirements": [{"id":"r1","text":"what is required","source_ref":"exact words used"}],
+  "constraints": [{"id":"c1","text":"limitation or rule","source_ref":"exact words used"}],
+  "flags": [{"type":"MISSING","description":"what info is missing","related_ids":["d1"]}],
   "user_edits": []
 }"""
 
 async def run_intake(transcript: str, rules: str) -> dict:
-    result = await call_llm_json(SYSTEM_PROMPT,
-        f"TRANSCRIPT:\n{transcript}\n\nRULES (context only):\n{rules}")
+    prompt = f"""TRANSCRIPT:
+{transcript}
+
+COMPANY RULES (for reference only - do not apply):
+{rules}
+
+Extract all decisions, requirements, constraints and flags from the transcript above. Use exact quotes."""
+
+    result = await call_llm_json(SYSTEM_PROMPT, prompt)
     result.setdefault("decisions", [])
     result.setdefault("requirements", [])
     result.setdefault("constraints", [])
