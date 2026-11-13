@@ -3182,6 +3182,8 @@
             S.planning.duration = Date.now() - S.planning.startTime;
             S.planning.output = p2.output; bumpCtx('planning'); setSt('planning', 'done'); setTiming('planning', S.planning.duration);
             if (p2.output) renderPlanningCards(p2.output);
+            // Rerun review after planning revision
+            setSt("review", "running"); const rRes2 = await api.review(run_id); S.review.attempts = (S.review.attempts||0)+1; S.review.output = rRes2.output; bumpCtx("review"); setSt("review", rRes2.output?.approved ? "done" : "needs_revision"); renderReviewCards(rRes2.output, S.review.attempts); if(rRes2.output?.approved){S.final=S.planning.output;renderOutput(S.final,S.intake.duration,S.planning.duration,S.review.duration);renderBoard(S.final?.tasks);renderTimeline(S.final?.tasks);}
           }
         }
         toast('Pipeline complete', 'success');
