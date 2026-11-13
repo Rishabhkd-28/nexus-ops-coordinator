@@ -14,13 +14,13 @@ async function req(method, path, body) {
 }
 
 export const api = {
-  start:           (transcript, rules) => req("POST", "/run/start", { transcript, rules }),
-  status:          (id)                => req("GET",  `/run/${id}/status`),
-  intake:          (id)                => req("POST", `/run/${id}/intake`),
-  planning:        (id)                => req("POST", `/run/${id}/planning`),
-  review:          (id)                => req("POST", `/run/${id}/review`),
-  editFact:        (id, description)   => req("POST", `/run/${id}/edit-fact`, { description }),
-  simulateFailure: (id, agent)         => req("POST", `/run/${id}/simulate-failure`, { agent }),
-  clearFailure:    (id)                => req("POST", `/run/${id}/clear-failure`),
-  reset:           (id)                => req("POST", `/run/${id}/reset`),
+  start:           (t, r) => req("POST", "/run/start", { transcript: t, rules: r }),
+  status:          (id)   => req("GET",  `/run/${id}/status`),
+  intake:          (id)   => req("POST", `/run/${id}/intake`),
+  planning:        (id)   => req("POST", `/run/${id}/planning`),
+  review:          (id)   => req("POST", `/run/${id}/review`),
+  editFact:        (id,d) => req("POST", `/run/${id}/edit-fact`, { description: d }),
+  simulateFailure: (id,a) => req("POST", `/run/${id}/simulate-failure`, { agent: a }),
+  clearFailure:    (id)   => req("POST", `/run/${id}/clear-failure`),
+  reset:           (id)   => req("POST", `/run/${id}/reset`),
 };
