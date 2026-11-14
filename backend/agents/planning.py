@@ -15,6 +15,8 @@ async def run_planning(intake_output: dict, rules: str, corrections=None) -> dic
     result = await call_llm_json(SYSTEM_PROMPT,
         f"INTAKE:\n{json.dumps(intake_output)}\n\nRULES:\n{rules}{corr}")
     result.setdefault("tasks", [])
+    if not result["tasks"]:
+        raise Exception("Planning returned no tasks")
     result.setdefault("unresolved_questions", [])
     result.setdefault("corrections_addressed", [])
     return result

@@ -44,7 +44,7 @@ async def _call_openrouter(model: str, prompt: str) -> str | None:
                         "model": model,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.3,
-                        "max_tokens": 1500,
+                        "max_tokens": 3000,
                     },
                 )
                 if response.status_code == 200:
@@ -78,17 +78,27 @@ async def call_llm(system_prompt: str, user_message: str) -> str:
             return result
     raise Exception("All models and keys failed")
 
-async def call_llm_json(system_prompt: str, user_message: str) -> dict:
-    raw = await call_llm(system_prompt, user_message)
-    if not raw:
-        return {"decisions":[],"requirements":[],"constraints":[],"flags":[],"tasks":[],"approved":False,"summary":"","corrections":[],"unresolved":[],"user_edits":[]}
+def _parse_json(raw: str):
     cleaned = raw.strip()
     if "```" in cleaned:
         cleaned = "\n".join(l for l in cleaned.split("\n") if not l.strip().startswith("```")).strip()
     start = cleaned.find("{"); end = cleaned.rfind("}") + 1
-    if start >= 0 and end > start:
-        cleaned = cleaned[start:end]
+    if start < 0 or end <= start:
+        return None
     try:
-        return json.loads(cleaned)
-    except:
-        return {"decisions":[],"requirements":[],"constraints":[],"flags":[],"tasks":[],"approved":False,"summary":raw[:200],"corrections":[],"unresolved":[],"user_edits":[]}
+        obj = json.loads(cleaned[start:end])
+        return obj if isinstance(obj, dict) else None
+    except Exception:
+        return None
+
+async def call_llm_json(system_prompt: str, user_message: str) -> dict:
+    """Call the LLM and return parsed JSON. Retries on unparseable output, then raises
+    (so the pipeline shows a real error instead of silently continuing with empty data)."""
+    last_raw = ""
+    for attempt in range(3):
+        last_raw = await call_llm(system_prompt, user_message)
+        obj = _parse_json(last_raw)
+        if obj is not None:
+            return obj
+        logger.warning(f"Unparseable JSON from LLM (attempt {attempt+1}): {last_raw[:120]!r}")
+    raise Exception(f"LLM returned invalid JSON after 3 attempts: {last_raw[:150]!r}")
