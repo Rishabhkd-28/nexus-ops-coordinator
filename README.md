@@ -5,8 +5,8 @@ Three distinct LLM-powered agents that turn a meeting transcript and company rul
 ## Architecture
 
 ```
-Frontend (React + Vite)  →  Backend (FastAPI)  →  OpenRouter API
-     Vercel (free)              Render (free)       free-tier models
+Frontend (single HTML page)  →  Backend (FastAPI)  →  OpenRouter API
+     Vercel (free)                   Railway             free-tier models (keys rotated)
 ```
 
 ### Agents
@@ -46,55 +46,20 @@ npm install
 npm run dev
 ```
 
-## Deploy (free)
+## Deploy
+- **Backend → Railway**: root `backend/`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`. Set env vars `OPENROUTER_API_KEY`, `OPENROUTER_API_KEY_2`, ... (any `*API_KEY*` var starting `sk-or-` is loaded).
+- **Frontend → Vercel**: static page `frontend/public/index.html`; the API URL is editable in the UI (Config tab).
 
-### Backend → Render.com
-1. Push `backend/` to GitHub
-2. New Web Service → connect repo
-3. Build: `pip install -r requirements.txt`
-4. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. Add env var: `OPENROUTER_API_KEY`
-
-### Frontend → Vercel
-1. Push `frontend/` to GitHub
-2. New Project → connect repo
-3. Add env var: `VITE_API_URL=https://your-render-app.onrender.com`
-4. Deploy
-
-## Environment variables
-
-| Variable | Where | Description |
-|---|---|---|
-| `OPENROUTER_API_KEY` | backend `.env` | From openrouter.ai — free account works |
-| `MODEL` | backend `.env` | Default: `google/gemma-3-27b-it:free` |
-| `VITE_API_URL` | frontend `.env.local` | Backend URL |
-
-## Demo cases
-
-| Case | How to trigger |
-|---|---|
-| Full 3-agent run | Load sample → Run pipeline |
-| Rule violation corrected | Run pipeline — Review automatically sends corrections to Planning (round 1) |
-| Fact correction propagates | After run: Controls tab → Correct a fact → Apply and rerun |
-| Simulated failure + retry | Controls tab → Simulate failure → Run pipeline → Retry button on failed node |
-| Two sessions isolated | Open two browser tabs, run in both — sessions never share context |
+## Tests
+```bash
+pip install httpx
+API_URL=https://nexus-ops-coordinator-production.up.railway.app python3 tests/e2e_live.py   # 2 transcripts, full pipeline + correction loop
+npm i puppeteer-core && node tests/ui_smoke.mjs                                              # headless Chrome UI smoke test
+```
+Both hit the live LLM (free-tier quota applies).
 
 ## Known limitations
-
-- Sessions live in memory — restarting the server clears all sessions (by design for a demo; add Redis for persistence)
-- Free Render tier sleeps after 15 min inactivity — first request after sleep takes ~30s to wake
-- OpenRouter free models have rate limits — if you hit them, switch to a different free model in Config tab
-- File upload supports text extraction only — PDFs are read as raw text (no OCR)
-
-## Approximate model cost per run
-
-| Model | Cost per run (3 agents) |
-|---|---|
-| `google/gemma-3-27b-it:free` | $0.00 (free tier) |
-| `meta-llama/llama-3.1-8b-instruct:free` | $0.00 (free tier) |
-| Any paid model (e.g. claude-sonnet) | ~$0.01–0.03 |
-
-## AI tools used
-
-- Claude (Anthropic) — architecture design, all code generation, UI design
-- All code reviewed and understood before submission
+- Sessions are in memory: a backend restart/redeploy clears them.
+- OpenRouter free tier: 50 requests/day/account; models sometimes return null/truncated output (handled by retry + JSON repair).
+- The Review agent often reaches the 2-round cap; the plan is then delivered with unresolved issues flagged.
+- Owners are sometimes left "Unassigned" by the model even when stated. UI is desktop-first.
