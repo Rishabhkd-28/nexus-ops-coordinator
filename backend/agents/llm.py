@@ -78,18 +78,44 @@ async def call_llm(system_prompt: str, user_message: str) -> str:
             return result
     raise Exception("All models and keys failed")
 
+def _repair_truncated(text: str):
+    """Best-effort repair of JSON cut off mid-output: drop the incomplete tail, close open brackets."""
+    stack, in_str, esc, last_ok = [], False, False, None
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc: esc = False
+            elif ch == "\\": esc = True
+            elif ch == '"': in_str = False
+            continue
+        if ch == '"': in_str = True
+        elif ch in "{[": stack.append(ch)
+        elif ch in "}]":
+            if not stack: break
+            stack.pop()
+            last_ok = (i + 1, list(stack))
+    if last_ok is None:
+        return None
+    pos, open_stack = last_ok
+    closers = "".join("}" if c == "{" else "]" for c in reversed(open_stack))
+    try:
+        obj = json.loads(text[:pos].rstrip().rstrip(",") + closers)
+        return obj if isinstance(obj, dict) else None
+    except Exception:
+        return None
+
 def _parse_json(raw: str):
     cleaned = raw.strip()
     if "```" in cleaned:
         cleaned = "\n".join(l for l in cleaned.split("\n") if not l.strip().startswith("```")).strip()
-    start = cleaned.find("{"); end = cleaned.rfind("}") + 1
-    if start < 0 or end <= start:
+    start = cleaned.find("{")
+    if start < 0:
         return None
+    end = cleaned.rfind("}") + 1
     try:
         obj = json.loads(cleaned[start:end])
         return obj if isinstance(obj, dict) else None
     except Exception:
-        return None
+        return _repair_truncated(cleaned[start:])
 
 async def call_llm_json(system_prompt: str, user_message: str) -> dict:
     """Call the LLM and return parsed JSON. Retries on unparseable output, then raises
