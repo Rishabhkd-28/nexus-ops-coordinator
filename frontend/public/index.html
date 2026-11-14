@@ -3140,7 +3140,7 @@
         S.intake.duration = Date.now() - S.intake.startTime;
         if (iRes.status === 'failed') { S.intake.status = 'failed'; S.intake.error = iRes.error; setSt('intake', 'failed'); addFeed('sys', iRes.error, 'err'); finishRun(); return }
         S.intake.output = iRes.output; bumpCtx('intake'); setSt('intake', 'done'); setTiming('intake', S.intake.duration);
-        if (iRes.output) renderIntakeCards(iRes.output);
+        if (iRes.output) { renderIntakeCards(iRes.output); renderEditFacts(iRes.output); }
         addFeed('intake', `Extracted ${iRes.output?.decisions?.length || 0} decisions, ${iRes.output?.flags?.length || 0} flags. Schema validated ✓`, 'handoff',
           JSON.stringify({ decisions: iRes.output?.decisions?.length, requirements: iRes.output?.requirements?.length, flags: iRes.output?.flags?.length, context_version: 'v1' }, null, 2));
 
