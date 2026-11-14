@@ -3130,6 +3130,7 @@
         addFeed('sys', 'Pipeline started — connecting to backend…', 'sys');
         const { run_id } = await api.start(tr, ru);
         S.runId = run_id;
+        if (S.simFail) { await api.simFail(run_id, S.simFail); addFeed('sys', `Injecting simulated fault on ${S.simFail}`, 'warn'); S.simFail = null; document.getElementById('simwarn').style.display = 'none'; }
         document.getElementById('sstrip').style.display = 'flex';
         document.getElementById('sess-id').textContent = run_id;
 
@@ -3356,7 +3357,7 @@
       document.getElementById('simwarn-t').textContent = `Next ${ag} call will fail (simulated fault)`;
       toast(`Failure injected on ${ag}`, 'info');
     }
-    function clearSimFail() { S.simFail = null; document.getElementById('simwarn').style.display = 'none'; toast('Failure cleared', 'info') }
+    function clearSimFail() { S.simFail = null; if (S.runId) api.clearFail(S.runId).catch(() => {}); document.getElementById('simwarn').style.display = 'none'; toast('Failure cleared', 'info') }
 
     // ── Output (Final plan) ───────────────────────────────────────────────────────
     function renderOutput(plan, td, tp, tr2) {
@@ -3369,9 +3370,9 @@
       const total = (td || 0) + (tp || 0) + (tr2 || 0);
 
       let h = `<div class="out-hero"><div class="oh-bg"></div>
-    <div class="oh-ey">final plan · review-approved · ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+    <div class="oh-ey">final plan · ${S.review?.output?.approved ? 'review-approved' : 'review: unresolved issues flagged'} · ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
     <div class="oh-title">Action plan</div>
-    <div class="oh-sub">Nexus Analytics · ${plan.tasks?.length || 0} tasks · generated from meeting transcript</div>
+    <div class="oh-sub">${plan.tasks?.length || 0} tasks · generated from meeting transcript</div>
     <div class="oh-actions">
       <button class="oh-btn oh-btn-md" onclick="exportMarkdown()">↓ Export Markdown</button>
       <button class="oh-btn oh-btn-cp" onclick="copyPlan()">⧉ Copy to clipboard</button>
@@ -3420,8 +3421,8 @@
     function exportMarkdown() {
       if (!S.final) { toast('No plan to export', 'error'); return }
       const p = S.final;
-      let md = `# Action Plan — Nexus Analytics\n\n`;
-      md += `> Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} · ${p.tasks?.length} tasks · Review approved\n\n`;
+      let md = `# Action Plan\n\n`;
+      md += `> Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} · ${p.tasks?.length} tasks · ${S.review?.output?.approved ? 'Review approved' : 'Review: unresolved issues flagged'}\n\n`;
       md += `## Tasks\n\n`;
       p.tasks?.forEach((t, i) => {
         md += `### ${i + 1}. ${t.title} \`${t.label}\`\n\n`;
@@ -3443,7 +3444,7 @@
     function copyPlan() {
       if (!S.final) { toast('No plan to copy', 'error'); return }
       const p = S.final;
-      let txt = `ACTION PLAN — Nexus Analytics\n${'─'.repeat(40)}\n\n`;
+      let txt = `ACTION PLAN\n${'─'.repeat(40)}\n\n`;
       p.tasks?.forEach((t, i) => {
         txt += `${i + 1}. ${t.title} [${t.label}]\n`;
         txt += `   Owner: ${t.owner || 'Unassigned'} | Deadline: ${t.deadline || 'None'}\n`;
