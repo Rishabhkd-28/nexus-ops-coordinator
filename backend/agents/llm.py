@@ -1,12 +1,21 @@
+from __future__ import annotations
 import httpx, os, json, logging, asyncio, random
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-OPENROUTER_KEYS = [k for k in [
-    os.getenv("OPENROUTER_API_KEY", ""),
-    os.getenv("OPENROUTER_API_KEY_2", ""),
-] if k]
+def _load_keys() -> list[str]:
+    """Collect every OpenRouter key (sk-or-...) from any *API_KEY* env var, deduped, in name order."""
+    keys: list[str] = []
+    for name in sorted(os.environ):
+        if "API_KEY" in name:
+            val = os.environ[name].strip()
+            if val.startswith("sk-or-") and val not in keys:
+                keys.append(val)
+    return keys
+
+OPENROUTER_KEYS = _load_keys()
+logger.info(f"Loaded {len(OPENROUTER_KEYS)} OpenRouter key(s)")
 
 OPENROUTER_MODELS = [
     "particle-ai/particle-1:free",
