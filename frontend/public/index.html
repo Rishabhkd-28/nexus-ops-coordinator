@@ -3155,36 +3155,43 @@
         addFeed('planning', `Proposed ${pRes.output?.tasks?.length || 0} tasks. Schema validated ✓ — sending to Review.`, 'handoff',
           JSON.stringify({ tasks: pRes.output?.tasks?.length }, null, 2));
 
-        // Review rounds
-        for (let round = 0; round < 2; round++) {
+        // Review rounds: review -> (corrections -> re-plan -> review)... backend caps at 2 reviews, 3rd call surfaces unresolved
+        for (let round = 0; round < 3; round++) {
           setSt('review', 'running'); S.review.startTime = Date.now();
           addFeed('review', 'Auditing plan against transcript and company rules…', 'review');
           const rRes = await api.review(run_id);
           S.review.duration = Date.now() - S.review.startTime;
-          S.review.attempts = rRes.attempts || round + 1;
           setTiming('review', S.review.duration);
           if (rRes.status === 'failed') { S.review.status = 'failed'; S.review.error = rRes.error; setSt('review', 'failed'); addFeed('sys', rRes.error, 'err'); finishRun(); return }
-          if (rRes.output?.approved || rRes.status === 'done') {
-            S.review.output = rRes.output; bumpCtx('review'); setSt('review', 'done');
-            renderReviewCards(rRes.output, S.review.attempts);
-            S.final = S.planning.output; renderOutput(S.final, S.intake.duration, S.planning.duration, S.review.duration);
-            addFeed('review', '<strong>Plan approved ✓</strong> All tasks grounded, owners assigned.', 'ok');
+          S.review.output = rRes.output; bumpCtx('review');
+          const approved = !!rRes.output?.approved;
+          const finalize = (note, kind) => {
+            setSt('review', 'done');
+            renderReviewCards(rRes.output, rRes.attempts || round + 1);
+            S.final = S.planning.output;
+            renderOutput(S.final, S.intake.duration, S.planning.duration, S.review.duration);
+            renderBoard(S.final?.tasks); renderTimeline(S.final?.tasks);
+            addFeed('review', note, kind);
             addFeed('sys', 'Pipeline complete. Final plan is ready.', 'sys');
-            break;
-          } else if (rRes.status === 'needs_revision') {
-            S.review.output = rRes.output; setSt('review', 'needs_revision');
+          };
+          if (approved) { finalize('<strong>Plan approved ✓</strong> All tasks grounded, owners assigned.', 'ok'); break; }
+          if (rRes.status === 'needs_revision') {
+            S.review.attempts = rRes.attempts || round + 1;
+            setSt('review', 'needs_revision');
             renderReviewCards(rRes.output, S.review.attempts);
             addFeed('review', `Sending ${rRes.output?.corrections?.length || 0} corrections back to Planning — round ${S.review.attempts}/2.`, 'warn');
-            // Rerun planning
             setSt('planning', 'running'); S.planning.startTime = Date.now();
             addFeed('planning', 'Revising plan with corrections…', 'planning');
             const p2 = await api.planning(run_id);
             S.planning.duration = Date.now() - S.planning.startTime;
+            if (p2.status === 'failed') { S.planning.status = 'failed'; S.planning.error = p2.error; setSt('planning', 'failed'); addFeed('sys', p2.error, 'err'); finishRun(); return }
             S.planning.output = p2.output; bumpCtx('planning'); setSt('planning', 'done'); setTiming('planning', S.planning.duration);
             if (p2.output) renderPlanningCards(p2.output);
-            // Rerun review after planning revision
-            setSt("review", "running"); const rRes2 = await api.review(run_id); S.review.attempts = (S.review.attempts||0)+1; S.review.output = rRes2.output; bumpCtx("review"); setSt("review", rRes2.output?.approved ? "done" : "needs_revision"); renderReviewCards(rRes2.output, S.review.attempts); if(rRes2.output?.approved){S.final=S.planning.output;renderOutput(S.final,S.intake.duration,S.planning.duration,S.review.duration);renderBoard(S.final?.tasks);renderTimeline(S.final?.tasks);}
+            continue;
           }
+          // status 'done' but not approved: max rounds reached, unresolved issues surfaced
+          finalize('<strong>Max review rounds (2) reached</strong> — plan delivered with unresolved issues flagged for manual resolution.', 'warn');
+          break;
         }
         toast('Pipeline complete', 'success');
       } catch (e) {
@@ -3317,17 +3324,22 @@
           addFeed('planning', 'Rerunning with updated context…', 'planning');
           const p = await api.planning(S.runId);
           S.planning.duration = Date.now() - S.planning.startTime;
+          if (p.status === 'failed') { setSt('planning', 'failed'); addFeed('sys', p.error, 'err'); throw { handled: true }; }
           S.planning.output = p.output; bumpCtx('planning'); setSt('planning', 'done'); setTiming('planning', S.planning.duration);
           if (p.output) renderPlanningCards(p.output);
           setSt('review', 'running');
           addFeed('review', 'Re-auditing after fact correction…', 'review');
           const r = await api.review(S.runId);
-          S.review.output = r.output; S.review.attempts = r.attempts || 1; bumpCtx('review'); setSt('review', 'done'); setTiming('review', 0);
+          if (r.status === 'failed') { setSt('review', 'failed'); addFeed('sys', r.error, 'err'); throw { handled: true }; }
+          S.review.output = r.output; S.review.attempts = r.attempts || 1; bumpCtx('review'); setSt('review', r.status === 'needs_revision' ? 'needs_revision' : 'done'); setTiming('review', 0);
           if (r.output) renderReviewCards(r.output, S.review.attempts);
           S.final = S.planning.output; renderOutput(S.final, S.intake.duration, S.planning.duration, S.review.duration);
-          addFeed('review', 'Plan re-approved with corrected facts.', 'ok');
+          renderBoard(S.final?.tasks); renderTimeline(S.final?.tasks);
+          if (r.output?.approved) addFeed('review', 'Plan re-approved with corrected facts.', 'ok');
+          else addFeed('review', `Review raised ${r.output?.corrections?.length || 0} correction(s) after the edit — plan shown with issues flagged.`, 'warn');
           toast('Rerun complete', 'success');
         } catch (e) {
+          if (e && e.handled) { S.running = false; document.getElementById('run-btn').disabled = false; return; }
           // demo fallback
           await sleep(1600); setSt('planning', 'done'); bumpCtx('planning'); renderPlanningCards(MP2);
           await sleep(400); setSt('review', 'done'); bumpCtx('review'); renderReviewCards(MR2, 1);
